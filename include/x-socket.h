@@ -14,6 +14,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
+using namespace std;
 
 //小缓冲区和最大listen数
 #define  MINIBUFSIZ 128
