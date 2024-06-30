@@ -39,11 +39,12 @@ int main(){
     int ret; //作函数返回值用
     fd_set fd_set_io,fd_set_i;  //io用作返回 i用作传入的样本
     int maxfd;
+    socklen_t addrlen;
+    SOCKADDRIN server_sockaddr,client_sockaddr;
 
-    SOCKADDRIN server_sockaddr;
-
-    //创建监听socket
+    //创建监听socket 并修改socket属性
     lfd = socket(AF_INET,SOCK_STREAM,0);
+    //setsockopt(ldf,SO_REUSEADDR
     //如果出错 退出进程
     HANDLE_ERROR_N1_EXIT(lfd,"create socket");  
     //绑定IP 和 PORT
@@ -71,6 +72,14 @@ int main(){
 
     //如果出错 退出进程
     HANDLE_ERROR_N1_EXIT(ret,"select");
+
+    //工作代码
+    int cfd = accept(lfd,(PSOCKADDR)&client_sockaddr,&addrlen);
+    char buf[MINIBUFSIZ] = {0};
+    ret = read(cfd,buf,MINIBUFSIZ);
+    write(STDOUT_FILENO,buf,ret);
+    close (cfd);
+    close (lfd);
 
     //结束
     std::cout << "finish my job!\n";
