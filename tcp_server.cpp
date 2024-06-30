@@ -1,19 +1,10 @@
-#include <sys/types.h>          /* See NOTES */
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
+#include <x-socket.h>
 
 #define  SERVER_PORT 9999
-#define  MAX_CONNECTIONS 128
-#define  MINIBUFSIZ 128
 
-typedef struct sockaddr_in SOCKADDRIN,*PSOCKADDRIN;
-typedef struct sockaddr    SOCKADDR,  *PSOCKADDR;
+
+
+
 
 void handle_socket_error(int ret){
 
