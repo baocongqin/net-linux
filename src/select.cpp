@@ -6,17 +6,15 @@
 
 #define  SERVER_PORT 9999
 
-//On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
-#define  HANDLE_ERROR_N1(v,caption) if(v==1){perror(caption);} //出错继续执行代码
-#define  HANDLE_ERROR_N1_EXIT(v,caption) if(v==1){perror(caption);exit(1);}   //出错退出进程
-#define  HANDLE_ERROR_N1_RETURN(v,caption) if(v==1){perror(caption);return -1;}  //出错返回到函数调用处
+
 
 
 //绑定IP和PORT到SOCKADDR结构中
 int bind_sockaddr(int fd,in_port_t port,const char* ip,PSOCKADDRIN psockaddr){
 
     //初始化psockaddr指向的内存 全置为 ascii 0
-    bzero(psockaddr,sizeof(SOCKADDRIN));
+    BZERO(psockaddr,sizeof(SOCKADDRIN));
+    
 
     psockaddr->sin_family = AF_INET; //默认IPV4
     psockaddr->sin_port = htons(port);
@@ -39,6 +37,9 @@ int main(){
     //定义变量
     int lfd; //文件描述符 监听用的
     int ret; //作函数返回值用
+    fd_set fd_set_io,fd_set_i;  //io用作返回 i用作传入的样本
+    int maxfd;
+
     SOCKADDRIN server_sockaddr;
 
     //创建监听socket
@@ -54,6 +55,26 @@ int main(){
     ret = listen(lfd,MAX_CONNECTIONS);
     //如果出错 退出进程
     HANDLE_ERROR_N1_EXIT(ret,"listen");
+
+    //使用select来监听网络
+    /*
+    int select(int nfds, fd_set *readfds, fd_set *writefds,
+                  fd_set *exceptfds, struct timeval *timeout);
+
+    */
+    FD_ZERO(&fd_set_i);
+    FD_SET(lfd,&fd_set_i);
+    fd_set_io = fd_set_i;
+    maxfd = lfd;  //设置最大fd
+
+    ret = select(maxfd+1,&fd_set_io,NULL,NULL,NULL); //阻塞式监听
+
+    //如果出错 退出进程
+    HANDLE_ERROR_N1_EXIT(ret,"select");
+
+    //结束
+    std::cout << "finish my job!\n";
+
 
 
 
