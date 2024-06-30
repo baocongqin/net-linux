@@ -4,6 +4,15 @@
 
 #define SERVER_PORT 9999
 
+char* get_ip_from_addr(PSOCKADDRIN psockaddr){
+
+    char* ip = (char*)malloc(20);
+    BZERO(ip,20);
+    inet_ntop(AF_INET,&psockaddr->sin_addr.s_addr,ip,20);
+
+    return ip;  //调用者自己释放内存
+}
+
 // 绑定IP和PORT到SOCKADDR结构中
 int bind_sockaddr(int fd, in_port_t port, const char *ip, PSOCKADDRIN psockaddr)
 {
@@ -93,27 +102,24 @@ int main()
 
                 char buf[2*MINIBUFSIZ] = {0};
                 n_read = read(i, buf, sizeof(buf));
-                if (n_read == 0) // 收到客户端关闭信号
+                if (n_read <=0) // 收到客户端关闭信号
                 {
                     FD_CLR(i, &fd_set_i);
                     close(i); // 关闭这个套接字
-                    continue;
-                }
-                else if (n_read == -1)
-                {
+                    char* ip = get_ip_from_addr(&client_sockaddr_array[i]);
+                    printf("%s@%d下线\n",ip,ntohs(client_sockaddr_array[i].sin_port));
+                    free(ip); //调用者自己释放
 
-                    // 出现错误
-                    HANDLE_ERROR_N1(n_read, "read");
                     continue;
                 }
+              
 
                 // 读取数据 并打印到标准输出 并回写
                 if (buf[n_read-1] == '\n')
                         buf[n_read-1] = 0;
-                char sip[MINIBUFSIZ] = {0};
-                inet_ntop(AF_INET, &client_sockaddr_array[i].sin_addr.s_addr, sip, sizeof(sip));
-                printf("%s@%d: %s\n", sip, ntohs(client_sockaddr_array[i].sin_port), buf); // 打印客户端IP PORT 及内容
-
+                char* ip = get_ip_from_addr(&client_sockaddr_array[i]);
+                printf("%s@%d: %s\n", ip, ntohs(client_sockaddr_array[i].sin_port), buf); // 打印客户端IP PORT 及内容
+                free(ip);
                 //追加文本
                 strcat(buf," recevied\n");
                 //回寫給客戶端
