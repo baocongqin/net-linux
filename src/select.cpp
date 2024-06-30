@@ -35,12 +35,15 @@ int main(){
 
 
     //定义变量
-    int lfd; //文件描述符 监听用的
+    int lfd,cfd; //文件描述符 监听用的  另外一个用于接受客户端
     int ret; //作函数返回值用
     fd_set fd_set_io,fd_set_i;  //io用作返回 i用作传入的样本
-    int maxfd;
+    int maxfd,n_read;
     socklen_t addrlen;
     SOCKADDRIN server_sockaddr,client_sockaddr;
+
+    //套接字对应sockaddr
+    SOCKADDRIN client_sockaddr_array[20]={0};
 
     //创建监听socket 并修改socket属性
     lfd = socket(AF_INET,SOCK_STREAM,0);
@@ -63,30 +66,68 @@ int main(){
                   fd_set *exceptfds, struct timeval *timeout);
 
     */
+    
+
+   
+    maxfd = lfd;  //设置最大fd
     FD_ZERO(&fd_set_i);
     FD_SET(lfd,&fd_set_i);
-    fd_set_io = fd_set_i;
-    maxfd = lfd;  //设置最大fd
 
-    ret = select(maxfd+1,&fd_set_io,NULL,NULL,NULL); //阻塞式监听
+    
 
-    //如果出错 退出进程
-    HANDLE_ERROR_N1_EXIT(ret,"select");
+    while(1){
+        
+        fd_set_io = fd_set_i;
+        ret = select(maxfd+1,&fd_set_io,NULL,NULL,NULL); //阻塞式监听
 
-    //工作代码
-    int cfd = accept(lfd,(PSOCKADDR)&client_sockaddr,&addrlen);
-    char buf[MINIBUFSIZ] = {0};
-    ret = read(cfd,buf,MINIBUFSIZ);
-    write(STDOUT_FILENO,buf,ret);
-    close (cfd);
-    close (lfd);
+        HANDLE_ERROR_N1_EXIT(ret<0?-1:1,"select");  //出错退出进程
 
-    //结束
-    std::cout << "finish my job!\n";
+        if (FD_ISSET(lfd,&fd_set_io)){
+
+                addrlen = sizeof(SOCKADDRIN);
+                cfd = accept(lfd,(PSOCKADDR)&client_sockaddr,&addrlen);
+                HANDLE_ERROR_N1_EXIT(cfd,"accept");
+                FD_SET(cfd,&fd_set_i);
+                maxfd = (cfd > maxfd ? cfd : maxfd);
+                client_sockaddr_array[cfd] = client_sockaddr;  //保存客户端信息
+                if (ret == 1)
+                    continue;
+        }
+
+        for (int i=lfd+1;i<=maxfd;i++){
+
+            if (FD_ISSET(i,&fd_set_io)){
+
+                char buf[MINIBUFSIZ] = {0};
+                n_read = read(i,buf,sizeof(buf));
+                if (n_read == 0)  //收到客户端关闭信号
+                {
+                    FD_CLR(i,&fd_set_i);
+                    close(i); //关闭这个套接字
+                }
+                else if(n_read ==-1){
+
+                    //出现错误
+                    HANDLE_ERROR_N1_EXIT(n_read,"read");
+                }
+
+                //读取数据 并打印到标准输出 
+                buf[n_read]=0;
+                char sip[MINIBUFSIZ] = {0};
+                inet_ntop(AF_INET,&client_sockaddr_array[i].sin_addr.s_addr,sip,sizeof(sip));
+                printf("%s@%d: %s",sip,ntohs(client_sockaddr_array[i].sin_port),buf);  //打印客户端IP PORT 及内容
+
+            }
+
+        }
+        
 
 
 
+    }
 
+
+    close(lfd);
 
     return 0;
 
